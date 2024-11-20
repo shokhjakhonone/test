@@ -32,7 +32,7 @@ term = Terminal()
 z = 0
 w = 0
 richAddress = set()
-RICH_FILE = "puzzle.txt"
+RICH_FILE = "Latest_Rich_Addr_Bitcoin_P2PKH.txt"
 FOUND_FILE = "found.txt"
 MNEMONIC_SIZE = 12 # Can be set to 24 if needed
 
