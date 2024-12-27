@@ -2,7 +2,6 @@ import os
 import hashlib
 import base58
 from ecdsa import SigningKey, SECP256k1
-import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -41,7 +40,7 @@ def check_address(address, address_set):
     return address in address_set
 
 
-# Обработка чанков (синхронная функция)
+# Обработка чанков
 def process_chunk(chunk_size, address_set, matches_file):
     for _ in range(chunk_size):
         # Генерация приватного ключа, публичного ключа и адреса
@@ -56,31 +55,32 @@ def process_chunk(chunk_size, address_set, matches_file):
                 f.write(f"Address: {btc_address} | Private Key: {private_key}\n")
 
 
-# Асинхронная основная функция
-async def main():
-    # Загрузка адресов из файла
+# Основная функция
+def main():
     addresses_file = "puzzle.txt"
     matches_file = "btc_matches.txt"
 
+    # Загрузка адресов из файла
     print("[INFO] Loading BTC addresses...")
-    with open(addresses_file, "r") as f:
-        address_set = set(line.strip() for line in f.readlines())
-    print(f"[INFO] Loaded {len(address_set)} Bitcoin addresses.")
+    try:
+        with open(addresses_file, "r") as f:
+            address_set = set(line.strip() for line in f.readlines())
+        print(f"[INFO] Loaded {len(address_set)} Bitcoin addresses.")
+    except FileNotFoundError:
+        print(f"[ERROR] File {addresses_file} not found. Please create it and add Bitcoin addresses.")
+        return
 
     # Размер чанка
     chunk_size = 100
 
-    # Многопоточность для повышения производительности
-    with ThreadPoolExecutor() as executor:
-        tasks = []
-        for _ in range(10):  # Одновременная обработка 10 чанков
-            tasks.append(asyncio.get_event_loop().run_in_executor(
-                executor, process_chunk, chunk_size, address_set, matches_file
-            ))
+    # Параллельная обработка
+    print("[INFO] Starting address generation and checking...")
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        for _ in range(100):  # Генерация 1000 чанков по 100 адресов
+            executor.submit(process_chunk, chunk_size, address_set, matches_file)
 
-        # Ожидание завершения всех задач
-        await asyncio.gather(*tasks)
+    print("[INFO] Processing completed. Check btc_matches.txt for results.")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
