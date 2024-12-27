@@ -2,7 +2,7 @@ import os
 import hashlib
 import base58
 from ecdsa import SigningKey, SECP256k1
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 # Генерация приватного ключа
@@ -40,9 +40,9 @@ def check_address(address, address_set):
     return address in address_set
 
 
-# Обработка чанков
-def process_chunk(chunk_size, address_set, matches_file):
-    for _ in range(chunk_size):
+# Функция для бесконечной генерации адресов
+def find_match(address_set, matches_file):
+    while True:
         # Генерация приватного ключа, публичного ключа и адреса
         private_key = generate_private_key()
         public_key = private_key_to_public_key(private_key)
@@ -53,6 +53,7 @@ def process_chunk(chunk_size, address_set, matches_file):
             print(f"[MATCH FOUND] Address: {btc_address} | Private Key: {private_key}")
             with open(matches_file, "a") as f:
                 f.write(f"Address: {btc_address} | Private Key: {private_key}\n")
+            return True  # Завершаем задачу
 
 
 # Основная функция
@@ -73,22 +74,18 @@ def main():
         print(f"[ERROR] File {addresses_file} not found. Please create it and add Bitcoin addresses.")
         return
 
-    # Размер чанка
-    chunk_size = 100
-    total_chunks = 100  # Общее количество чанков
+    print("[INFO] Starting infinite address generation and checking...")
 
     # Параллельная обработка
-    print("[INFO] Starting address generation and checking...")
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = []
-        for _ in range(total_chunks):  # Запускаем обработку 100 чанков
-            futures.append(executor.submit(process_chunk, chunk_size, address_set, matches_file))
+    with ThreadPoolExecutor(max_workers=10) as executor:  # 10 потоков
+        futures = [executor.submit(find_match, address_set, matches_file) for _ in range(10)]
 
-        # Ожидание завершения всех задач
-        for future in futures:
-            future.result()  # Ожидаем завершения каждой задачи
-
-    print("[INFO] Processing completed. Check btc_matches.txt for results.")
+        # Ожидание завершения первой найденной задачи
+        for future in as_completed(futures):
+            if future.result():  # Как только результат True, завершаем работу
+                print("[INFO] Match found! Stopping all tasks.")
+                executor.shutdown(wait=False)
+                break
 
 
 if __name__ == "__main__":
