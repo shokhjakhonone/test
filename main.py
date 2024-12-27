@@ -60,6 +60,9 @@ def main():
     addresses_file = "puzzle.txt"
     matches_file = "btc_matches.txt"
 
+    # Убедимся, что файл для результатов существует
+    open(matches_file, "w").close()
+
     # Загрузка адресов из файла
     print("[INFO] Loading BTC addresses...")
     try:
@@ -72,12 +75,18 @@ def main():
 
     # Размер чанка
     chunk_size = 100
+    total_chunks = 100  # Общее количество чанков
 
     # Параллельная обработка
     print("[INFO] Starting address generation and checking...")
     with ThreadPoolExecutor(max_workers=10) as executor:
-        for _ in range(100):  # Генерация 1000 чанков по 100 адресов
-            executor.submit(process_chunk, chunk_size, address_set, matches_file)
+        futures = []
+        for _ in range(total_chunks):  # Запускаем обработку 100 чанков
+            futures.append(executor.submit(process_chunk, chunk_size, address_set, matches_file))
+
+        # Ожидание завершения всех задач
+        for future in futures:
+            future.result()  # Ожидаем завершения каждой задачи
 
     print("[INFO] Processing completed. Check btc_matches.txt for results.")
 
