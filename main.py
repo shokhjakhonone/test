@@ -1,9 +1,9 @@
 import os
 import hashlib
 import base58
+from ecdsa import SigningKey, SECP256k1
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from ecdsa import SigningKey, SECP256k1
 
 
 # Генерация приватного ключа
@@ -41,8 +41,8 @@ def check_address(address, address_set):
     return address in address_set
 
 
-# Асинхронная обработка чанков
-async def process_chunk(chunk_size, address_set, matches_file):
+# Обработка чанков (синхронная функция)
+def process_chunk(chunk_size, address_set, matches_file):
     for _ in range(chunk_size):
         # Генерация приватного ключа, публичного ключа и адреса
         private_key = generate_private_key()
